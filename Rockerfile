@@ -1,0 +1,28 @@
+FROM golang:1.7.3
+RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
+RUN apt-get install nodejs
+RUN apt-get install bzip2
+RUN go get -d  github.com/grafana/grafana; exit 0
+WORKDIR $GOPATH/src/github.com/grafana/grafana
+RUN go run build.go setup
+RUN go run build.go build
+RUN npm install
+RUN npm run build
+RUN npm install -g grunt-cli
+RUN grunt release --force
+RUN mkdir grafana
+RUN tar -xzvf dist/grafana-4*.tar.gz -C grafana --strip-components 1
+EXPORT grafana
+
+
+FROM ubuntu
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates && \
+    apt-get clean
+IMPORT grafana 
+WORKDIR grafana
+VOLUME ["/grafana/data"]
+CMD ["bin/grafana-server"]
+EXPOSE 3000
+PUSH ctrlok/grafana-master:latest
+PUSH ctrlok/grafana-master:4.0.0-pre1
